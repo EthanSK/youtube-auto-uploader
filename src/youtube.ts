@@ -1,6 +1,8 @@
 import { google, youtube_v3 } from "googleapis";
 import { config } from "./config";
-import { PLAYLIST_PAGE_SIZE, VIDEOS_PAGE_SIZE } from "./constants";
+import { PLAYLIST_MAX_PAGE_SIZE, VIDEOS_MAX_PAGE_SIZE } from "./constants";
+import fs from "fs-extra";
+import path from "path";
 
 const auth = new google.auth.OAuth2({
   clientId: process.env.YOUTUBE_OAUTH_CLIENT_ID,
@@ -52,7 +54,7 @@ export async function getNextPageInPlaylist(
   const res = await youtube.playlistItems.list({
     playlistId,
     pageToken: pageToken,
-    maxResults: PLAYLIST_PAGE_SIZE,
+    maxResults: PLAYLIST_MAX_PAGE_SIZE,
     part: ["contentDetails", "status"],
   });
 
@@ -64,14 +66,13 @@ export async function getVideoInfo(videoIds: string[]) {
   let videoInfos: youtube_v3.Schema$Video[] = [];
   while (videosIdsRemaining.length > 0) {
     const res = await youtube.videos.list({
-      id: videosIdsRemaining.slice(0, VIDEOS_PAGE_SIZE),
+      id: videosIdsRemaining.slice(0, VIDEOS_MAX_PAGE_SIZE),
       part: ["status", "fileDetails", "snippet"],
     });
 
     videoInfos = [...videoInfos, ...(res.data.items ?? [])];
 
-    videosIdsRemaining.splice(0, VIDEOS_PAGE_SIZE);
-    console.log("left: ", videosIdsRemaining.length);
+    videosIdsRemaining.splice(0, VIDEOS_MAX_PAGE_SIZE);
   }
 
   return videoInfos;
@@ -111,4 +112,75 @@ export function calcDateToScheduleNextVideo(
   //if the newest date from last step + sched time is less than date.now(), we can't use it (coz it will try to schedule in past)
   //so we have to try and get the newest publishedAt time, and see if that + schedtime is > than date.now().
   //if not, we have to use date.now() + schedtime as the schedule date for the next video
+}
+
+async function addVideoToPlaylist(videoId: string, playlistId: string) {
+  return youtube.playlistItems.insert({
+    part: ["snippet"],
+    requestBody: {
+      snippet: {
+        playlistId,
+        resourceId: { videoId, kind: "youtube#video" },
+      },
+    },
+  });
+}
+
+export function generateTitleFromVideoFileName(fileName: string) {
+  return path.parse(fileName).name;
+}
+
+export async function uploadVideo(options: {
+  filePath: string;
+  title: string;
+  scheduledDate: Date;
+  description?: string;
+  categoryId?: string;
+  tags?: string[];
+  defaultAudioLanguage?: string;
+  defaultLanguage?: string;
+  playlistIds?: string[];
+  madeForKids: boolean;
+}) {
+  const {
+    filePath,
+    title,
+    description,
+    scheduledDate,
+    categoryId,
+    tags,
+    defaultAudioLanguage,
+    defaultLanguage,
+    playlistIds,
+    madeForKids,
+  } = options;
+  const res = await youtube.videos.insert({
+    part: ["snippet", "status"],
+    requestBody: {
+      snippet: {
+        title,
+        description,
+        categoryId,
+        tags,
+        defaultAudioLanguage,
+        defaultLanguage,
+      },
+      status: {
+        publishAt: scheduledDate.toISOString(),
+        privacyStatus: "private",
+        selfDeclaredMadeForKids: madeForKids,
+      },
+    },
+    media: {
+      body: fs.createReadStream(filePath),
+    },
+  });
+
+  if (res.data.id && (playlistIds?.length ?? 0) > 0) {
+    for (const playlistId of playlistIds ?? []) {
+      await addVideoToPlaylist(res.data.id, playlistId);
+    }
+  }
+
+  return res.data;
 }

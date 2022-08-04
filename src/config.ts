@@ -8,13 +8,24 @@ export const config = {
   youtubeChannelId: getEnvVarOrThrow("YOUTUBE_CHANNEL_ID"),
   pathToFolderWithVideos: getEnvVarOrThrow("PATH_TO_FOLDER_WITH_VIDEOS"),
   sortOrderOfVideoFiles: getEnvVarOrThrow("SORT_ORDER_OF_VIDEO_FILES"),
-  numYoutubeVideosToPostAtOnce: getEnvVarOrThrow<number>(
-    "NUM_YOUTUBE_VIDEOS_TO_POST_AT_ONCE"
-  ),
+
   secsBetweenVideoScheduleDate: getEnvVarOrThrow<number>(
     "SECS_BETWEEN_DATE_VIDEOS_ARE_SCHEDULED"
   ),
   secsBetweenRunningProgram: getEnvVarOrThrow<number>(
     "SECS_BETWEEN_RUNNING_PROGRAM"
   ),
+  youtubeVideoCategoryId: getEnvVarOrThrow("YOUTUBE_VIDEO_CATEGORY_ID"),
+  youtubeVideoTags: JSON.parse(
+    process.env.YOUTUBE_VIDEO_TAGS ?? "[]"
+  ) as string[],
+  youtubeVideoDescription: process.env.YOUTUBE_VIDEO_DESCRIPTION,
+  youtubeVideoTitleAndDescriptionLanguage:
+    process.env.YOUTUBE_VIDEO_TITLE_AND_DESCRIPTION_LANGUAGE,
+  youtubeVideoAudioLanguage: process.env.YOUTUBE_VIDEO_AUDIO_LANGUAGE,
+  youtubeVideoPlaylistIds: JSON.parse(
+    process.env.YOUTUBE_VIDEO_PLAYLIST_IDS ?? "[]"
+  ) as string[],
+  youtubeVideoMadeForKids: (process.env.YOUTUBE_VIDEO_MADE_FOR_KIDS ??
+    false) as boolean,
 };

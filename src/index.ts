@@ -1,14 +1,14 @@
 import "dotenv/config";
-import { google } from "googleapis";
 import { config } from "./config";
 import {
   calcDateToScheduleNextVideo,
-  getAllVideosInPlaylist,
+  generateTitleFromVideoFileName,
   getAllVideosOnChannel,
   getVideoInfo,
+  uploadVideo,
 } from "./youtube";
-import fs from "fs-extra";
 import { getFilesInDir } from "./utils";
+import path from "path";
 
 async function run() {
   console.log("path to videos folder: ", config.pathToFolderWithVideos);
@@ -18,13 +18,11 @@ async function run() {
   console.log(
     `There are currently ${allVidsOnChannel.length} videos on the channel with id ${config.youtubeChannelId}`
   );
-  const videoInfos = await getVideoInfo(
+  const channelVideoInfos = await getVideoInfo(
     allVidsOnChannel
       .filter((el) => el.contentDetails?.videoId)
       .map((el) => el.contentDetails!.videoId!)
   );
-
-  console.log(videoInfos, videoInfos?.length);
 
   const videoFiles = await getFilesInDir(
     config.pathToFolderWithVideos,
@@ -32,14 +30,59 @@ async function run() {
   );
 
   const videoToUpload = videoFiles.find(
-    (file) => !videoInfos.map((el) => el.fileDetails?.fileName).includes(file)
+    (file) =>
+      !channelVideoInfos
+        .map((el) => el.snippet?.title)
+        .includes(generateTitleFromVideoFileName(file))
   );
 
-  console.log("video to upload: ", videoToUpload);
+  console.log("Video to upload: ", videoToUpload);
 
-  const dateToScheduleNextVideo = calcDateToScheduleNextVideo(videoInfos);
+  if (!videoToUpload) {
+    console.warn("No new videos to upload! Skipping...");
+    return; //return instead of throw so program can run again later in case there have been more videos added to folder
+  }
 
-  //to convert the file name to a video title, we should keep the symbols tbh. just remove the .mp4, and upper case the start of each word actually nah fuck that we don't need to do that.
+  const dateToScheduleNextVideo =
+    calcDateToScheduleNextVideo(channelVideoInfos);
+
+  console.log("Date to schedule next video: ", dateToScheduleNextVideo);
+
+  const uploadVideoRes = await uploadVideo({
+    filePath: path.join(config.pathToFolderWithVideos, videoToUpload),
+    title: generateTitleFromVideoFileName(videoToUpload),
+    description: config.youtubeVideoDescription,
+    scheduledDate: dateToScheduleNextVideo,
+    tags: config.youtubeVideoTags,
+    categoryId: config.youtubeVideoCategoryId,
+    defaultAudioLanguage: config.youtubeVideoAudioLanguage,
+    defaultLanguage: config.youtubeVideoTitleAndDescriptionLanguage,
+    playlistIds: config.youtubeVideoPlaylistIds,
+    madeForKids: config.youtubeVideoMadeForKids,
+  });
+
+  console.log("Uploaded video with ID ", uploadVideoRes.id);
+
+  //TODO: - need to call run every x seconds. say when the next run is scheduled to happed in human readable time
+
+  //TODO: - do sample.ennv
 }
 
-run();
+async function runPeriodic() {
+  while (true) {
+    console.log("Running program at ", new Date().toISOString());
+    await run();
+    console.log("Program run complete!");
+    console.log(
+      "Next program run is set for ",
+      new Date(
+        Date.now() + config.secsBetweenRunningProgram * 1000
+      ).toISOString()
+    );
+    await new Promise((resolve) =>
+      setTimeout(resolve, config.secsBetweenRunningProgram * 1000)
+    );
+  }
+}
+
+runPeriodic();
