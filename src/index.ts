@@ -62,16 +62,16 @@ async function run() {
   });
 
   console.log("Uploaded video with ID ", uploadVideoRes.id);
-
-  //TODO: - need to call run every x seconds. say when the next run is scheduled to happed in human readable time
-
-  //TODO: - do sample.ennv
 }
 
 async function runPeriodic() {
   while (true) {
     console.log("Running program at ", new Date().toISOString());
-    await run();
+    try {
+      await run();
+    } catch (error) {
+      console.error(error);
+    }
     console.log("Program run complete!");
     console.log(
       "Next program run is set for ",
