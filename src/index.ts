@@ -47,6 +47,7 @@ async function run() {
     calcDateToScheduleNextVideo(channelVideoInfos);
 
   console.log("Date to schedule next video: ", dateToScheduleNextVideo);
+  console.log("Uploading...");
 
   const uploadVideoRes = await uploadVideo({
     filePath: path.join(config.pathToFolderWithVideos, videoToUpload),
