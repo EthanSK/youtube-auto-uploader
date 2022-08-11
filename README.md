@@ -17,6 +17,8 @@ Then select the `https://www.googleapis.com/auth/youtube` and `https://www.googl
 
 https://stackoverflow.com/questions/19766912/how-do-i-authorise-an-app-web-or-installed-without-user-intervention/19766913#19766913
 
+https://stackoverflow.com/a/66292541/6820042
+
 ## Notes
 
 The title of video will just be the file name without the extension.
