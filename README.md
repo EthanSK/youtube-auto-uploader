@@ -9,6 +9,7 @@ Will only upload videos that haven't been uploaded to channel yet (by checking t
 - Set up project with `npm install`
 - Copy the `template.env` to a `.env` file, and replace all the fields with proper values
 - Run with `npm run build-and-run`
+- If it stops working, try getting a new refresh token
 
 ## Obtaining OAuth credentials
 
