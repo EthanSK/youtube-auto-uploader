@@ -127,7 +127,7 @@ async function addVideoToPlaylist(videoId: string, playlistId: string) {
 }
 
 export function generateTitleFromVideoFileName(fileName: string) {
-  return path.parse(fileName).name;
+  return path.parse(fileName).name.trim(); //need to trim coz youtube does that behind the scenes...
 }
 
 export async function uploadVideo(options: {
